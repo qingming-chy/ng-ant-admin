@@ -4,6 +4,7 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { merge } from 'rxjs';
 import { tap } from 'rxjs/operators';
 
+import { CollapsedNavWidth, SideNavWidth } from '@app/config/constant';
 import { Menu } from '@core/services/types';
 import { SplitNavStoreService } from '@store/common-store/split-nav-store.service';
 import { ThemeService } from '@store/common-store/theme.service';
@@ -45,7 +46,7 @@ export class FooterSubmitComponent implements OnInit {
       tap(themesOptions => {
         this.hasLeftNav = themesOptions.hasNavArea;
         this.isTopMode = themesOptions.mode === 'top';
-        this.isMixMode = themesOptions.mode === 'mixi';
+        this.isMixMode = themesOptions.mode === 'mixin';
       })
     );
     const sub2$ = this.isCollapsed$.pipe(
@@ -71,7 +72,7 @@ export class FooterSubmitComponent implements OnInit {
         } else {
           let width = 0;
           if (this.hasLeftNav) {
-            width = this.isCollapsed ? 48 : 208;
+            width = this.isCollapsed ? CollapsedNavWidth : SideNavWidth;
           }
           this.setWidth(width);
         }

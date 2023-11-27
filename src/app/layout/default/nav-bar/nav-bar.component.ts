@@ -1,10 +1,9 @@
-import { DOCUMENT, NgIf, NgTemplateOutlet, NgFor, AsyncPipe } from '@angular/common';
+import { NgIf, NgTemplateOutlet, NgFor, AsyncPipe } from '@angular/common';
 import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, Input, Inject, inject, DestroyRef, booleanAttribute } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { Title } from '@angular/platform-browser';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
-import { filter, map, mergeMap, share, switchMap, tap } from 'rxjs/operators';
+import { filter, map, mergeMap, switchMap, tap } from 'rxjs/operators';
 
 import { ThemeMode } from '@app/layout/default/setting-drawer/setting-drawer.component';
 import { TabService } from '@core/services/common/tab.service';
@@ -30,26 +29,28 @@ import { NzMenuModule } from 'ng-zorro-antd/menu';
 })
 export class NavBarComponent implements OnInit {
   @Input({ transform: booleanAttribute })
-  isMixiHead = false; // 是混合模式顶部导航
+  isMixinHead = false; // 是混合模式顶部导航
   @Input({ transform: booleanAttribute })
-  isMixiLeft = false;
+  isMixinLeft = false;
+
+  routerPath = this.router.url;
+  menus: Menu[] = [];
+  copyMenus: Menu[] = [];
+  authCodeArray: string[] = [];
 
   themesOptions$ = this.themesService.getThemesMode();
   isNightTheme$ = this.themesService.getIsNightTheme();
   isCollapsed$ = this.themesService.getIsCollapsed();
   isOverMode$ = this.themesService.getIsOverMode();
   leftMenuArray$ = this.splitNavStoreService.getSplitLeftNavArrayStore();
+  subTheme$: Observable<any>;
 
-  routerPath = this.router.url;
   themesMode: ThemeMode['key'] = 'side';
   isOverMode = false;
   isCollapsed = false;
-  isMixiMode = false;
+  isMixinMode = false;
   leftMenuArray: Menu[] = [];
-  menus: Menu[] = [];
-  copyMenus: Menu[] = [];
-  authCodeArray: string[] = [];
-  subTheme$: Observable<any>;
+
   destroyRef = inject(DestroyRef);
 
   constructor(
@@ -60,9 +61,7 @@ export class NavBarComponent implements OnInit {
     private activatedRoute: ActivatedRoute,
     private tabService: TabService,
     private cdr: ChangeDetectorRef,
-    private themesService: ThemeService,
-    private titleServe: Title,
-    @Inject(DOCUMENT) private doc: Document
+    private themesService: ThemeService
   ) {
     this.initMenus();
 
@@ -73,14 +72,13 @@ export class NavBarComponent implements OnInit {
       }),
       tap(options => {
         this.themesMode = options.mode;
-        this.isMixiMode = this.themesMode === 'mixi';
+        this.isMixinMode = this.themesMode === 'mixin';
       }),
-      share(),
       takeUntilDestroyed(this.destroyRef)
     );
 
     // 监听混合模式下左侧菜单数据源
-    this.subMixiModeSideMenu();
+    this.subMixinModeSideMenu();
     // 监听折叠菜单事件
     this.subIsCollapsed();
     this.subAuth();
@@ -91,7 +89,7 @@ export class NavBarComponent implements OnInit {
           this.subTheme$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
             // 主题切换为混合模式下，设置左侧菜单数据源
             // 如果放在ngInit监听里面，会在混合模式下，刷新完页面切换路由，runOutSideAngular
-            if (this.isMixiMode) {
+            if (this.isMixinMode) {
               this.setMixModeLeftMenu();
             }
           });
@@ -128,28 +126,7 @@ export class NavBarComponent implements OnInit {
       .subscribe(routeData => {
         // 详情页是否是打开新tab页签形式
         let isNewTabDetailPage = routeData['newTab'] === 'true';
-
-        let route = this.activatedRoute;
-        while (route.firstChild) {
-          route = route.firstChild;
-        }
-
-        let title = 'Ant Design';
-        if (typeof route.routeConfig?.title === 'string') {
-          title = route.routeConfig?.title;
-        }
-
-        this.tabService.addTab(
-          {
-            snapshotArray: [route.snapshot],
-            title,
-            path: this.routerPath
-          },
-          isNewTabDetailPage
-        );
-        this.tabService.findIndex(this.routerPath);
-        // 混合模式时，切换tab，让左侧菜单也相应变化
-        this.setMixModeLeftMenu();
+        this.routeEndAction(isNewTabDetailPage);
       });
   }
 
@@ -291,7 +268,7 @@ export class NavBarComponent implements OnInit {
         this.menus = this.cloneMenuArray(this.copyMenus);
         this.clickMenuItem(this.menus);
         // 混合模式下要在点击一下左侧菜单数据源,不然有二级菜单的菜单在折叠状态变为展开时，不open
-        if (this.themesMode === 'mixi') {
+        if (this.themesMode === 'mixin') {
           this.clickMenuItem(this.leftMenuArray);
         }
       } else {
@@ -317,10 +294,34 @@ export class NavBarComponent implements OnInit {
   }
 
   // 监听混合模式下左侧菜单数据源
-  private subMixiModeSideMenu(): void {
+  private subMixinModeSideMenu(): void {
     this.leftMenuArray$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(res => {
       this.leftMenuArray = res;
     });
+  }
+
+  routeEndAction(isNewTabDetailPage = false): void {
+    let route = this.activatedRoute;
+    while (route.firstChild) {
+      route = route.firstChild;
+    }
+
+    let title = 'Ant Design';
+    if (typeof route.routeConfig?.title === 'string') {
+      title = route.routeConfig?.title;
+    }
+
+    this.tabService.addTab(
+      {
+        snapshotArray: [route.snapshot],
+        title,
+        path: this.routerPath
+      },
+      isNewTabDetailPage
+    );
+    this.tabService.findIndex(this.routerPath);
+    // 混合模式时，切换tab，让左侧菜单也相应变化
+    this.setMixModeLeftMenu();
   }
 
   ngOnInit(): void {
@@ -330,5 +331,6 @@ export class NavBarComponent implements OnInit {
         this.closeMenu();
       }
     });
+    this.routeEndAction();
   }
 }
