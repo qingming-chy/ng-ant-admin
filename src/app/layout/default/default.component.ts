@@ -73,7 +73,9 @@ export class DefaultComponent implements OnInit, AfterViewInit {
   splitNavStoreService = inject(SplitNavStoreService); // 用于获取分割菜单的store
 
   isNightTheme$ = this.themesService.getIsNightTheme();
+  isCompactTheme$ = this.themesService.getIsCompactTheme();
   themesOptions$ = this.themesService.getThemesMode();
+  styleThemeMode$ = this.themesService.getStyleThemeMode();
   isOverMode$: Observable<boolean> = this.themesService.getIsOverMode();
   isCollapsed$: Observable<boolean> = this.themesService.getIsCollapsed();
   mixinModeLeftNav$ = this.splitNavStoreService.getSplitLeftNavArrayStore();
@@ -81,6 +83,7 @@ export class DefaultComponent implements OnInit, AfterViewInit {
   showChats = true; // 是否显示聊天窗口
   isMixinMode = false; // 是否是混合模式
   isNightTheme = false; // 是否是暗色主题
+  isCompactTheme = false; // 是否是紧凑主题
   isFixedLeftNav = false; // 是否固定左侧菜单
   isSplitNav = false; // 是否分割菜单
   isCollapsed = false; // 是否折叠左侧菜单
@@ -118,14 +121,24 @@ export class DefaultComponent implements OnInit, AfterViewInit {
   }
 
   judgeMarginTop(): string {
+    let marginTop;
     if (this.isFixedHead && !this.isMixinMode && this.isHasTopArea) {
-      return this.isShowTab ? (this.isFixedTab ? '96px' : '48px') : '48px';
+      marginTop = this.isShowTab ? (this.isFixedTab ? 96 : 48) : 48;
     } else {
-      return this.isShowTab ? (this.isFixedTab ? '48px' : '0px') : '0px';
+      marginTop = this.isShowTab ? (this.isFixedTab ? 48 : 0) : 0;
     }
+    if (this.isCompactTheme) {
+      marginTop = marginTop - 8;
+    }
+    return `${marginTop}px`;
   }
 
   getThemeOptions(): void {
+    this.styleThemeMode$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => {
+      // 切换风格模式时也要重新计算margin，这个跟themesOptions$里貌似时重复的代码，考虑用combineLatest来进行合并的话，会有性能损失（切换风格时也会执行themeOptions里面的逻辑），所以这里分开来写了
+      this.contentMarginTop = this.judgeMarginTop();
+    });
+
     this.themesOptions$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(res => {
       this.themesOptions = res;
 
@@ -151,6 +164,7 @@ export class DefaultComponent implements OnInit, AfterViewInit {
     this.isCollapsed$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(res => (this.isCollapsed = res));
     this.isOverMode$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(res => (this.isOverMode = res));
     this.isNightTheme$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(res => (this.isNightTheme = res));
+    this.isCompactTheme$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(res => (this.isCompactTheme = res));
     this.mixinModeLeftNav$.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(res => (this.mixinModeLeftNav = res));
   }
 

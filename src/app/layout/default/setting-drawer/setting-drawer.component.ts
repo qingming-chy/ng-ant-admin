@@ -6,12 +6,12 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { first } from 'rxjs/operators';
 
-import { IsNightKey, ThemeOptionsKey } from '@config/constant';
+import { StyleThemeModelKey, ThemeOptionsKey } from '@config/constant';
 import { SimpleReuseStrategy } from '@core/services/common/reuse-strategy';
 import { TabService } from '@core/services/common/tab.service';
 import { ThemeSkinService } from '@core/services/common/theme-skin.service';
 import { WindowService } from '@core/services/common/window.service';
-import { SettingInterface, ThemeService } from '@store/common-store/theme.service';
+import { SettingInterface, StyleTheme, StyleThemeInterface, ThemeService } from '@store/common-store/theme.service';
 import { fnFormatToHump } from '@utils/tools';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzConfigService } from 'ng-zorro-antd/core/config';
@@ -19,7 +19,6 @@ import { NzDividerModule } from 'ng-zorro-antd/divider';
 import { NzDrawerModule } from 'ng-zorro-antd/drawer';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import { NzListModule } from 'ng-zorro-antd/list';
-import { NzMessageService } from 'ng-zorro-antd/message';
 import { NzSwitchModule } from 'ng-zorro-antd/switch';
 import { NzToolTipModule } from 'ng-zorro-antd/tooltip';
 
@@ -45,6 +44,9 @@ export interface ThemeMode extends NormalModel {
   key: 'side' | 'top' | 'mixin';
 }
 
+type ExcludedKeys = 'theme' | 'color' | 'mode';
+type SettingKey = Exclude<keyof SettingInterface, ExcludedKeys>;
+
 @Component({
   selector: 'app-setting-drawer',
   templateUrl: './setting-drawer.component.html',
@@ -65,8 +67,13 @@ export class SettingDrawerComponent implements OnInit {
 
   destroyRef = inject(DestroyRef);
   themesOptions$ = this.themesService.getThemesMode();
-  isNightTheme$ = this.themesService.getIsNightTheme();
-  _isNightTheme = false;
+  _currentStyleTheme: StyleThemeInterface = {
+    default: false,
+    dark: false,
+    compact: false,
+    aliyun: false
+  };
+
   _themesOptions: SettingInterface = {
     theme: 'dark',
     color: '#1890FF',
@@ -186,10 +193,19 @@ export class SettingDrawerComponent implements OnInit {
     this.setThemeOptions();
   }
 
-  // 修改黑夜主题
-  changeNightTheme(isNight: boolean): void {
-    this.windowServe.setStorage(IsNightKey, `${isNight}`);
-    this.themesService.setIsNightTheme(isNight);
+  // 修改主题
+  changeStyleTheme(styleTheme: StyleTheme): void {
+    // 让每个主题都变成未选中
+    Object.keys(this._currentStyleTheme).forEach(item => {
+      this._currentStyleTheme[item as StyleTheme] = false;
+    });
+    // 当前选中的主题变为选中状态
+    this._currentStyleTheme[styleTheme] = true;
+    // 存储主题模式状态
+    this.themesService.setStyleThemeMode(styleTheme);
+    // 持久化
+    this.windowServe.setStorage(StyleThemeModelKey, styleTheme);
+    // 切换主题
     this.themeSkinService.toggleTheme().then();
   }
 
@@ -219,8 +235,8 @@ export class SettingDrawerComponent implements OnInit {
     this.windowServe.setStorage(ThemeOptionsKey, JSON.stringify(this._themesOptions));
   }
 
-  // 修改固定头部
-  changeFixed(isTrue: boolean, type: 'isShowTab' | 'splitNav' | 'fixedTab' | 'fixedLeftNav' | 'fixedHead' | 'hasTopArea' | 'hasFooterArea' | 'hasNavArea' | 'hasNavHeadArea'): void {
+  // 修改主题配置项
+  changeThemeOptions(isTrue: boolean, type: SettingKey): void {
     // 非固定头部时，设置标签也不固定
     if (type === 'fixedHead' && !isTrue) {
       this._themesOptions['fixedTab'] = false;
@@ -254,7 +270,10 @@ export class SettingDrawerComponent implements OnInit {
   }
 
   initThemeOption(): void {
-    this.isNightTheme$.pipe(first(), takeUntilDestroyed(this.destroyRef)).subscribe(res => (this._isNightTheme = res));
+    this.themesService
+      .getStyleThemeMode()
+      .pipe(first(), takeUntilDestroyed(this.destroyRef))
+      .subscribe(res => (this._currentStyleTheme[res] = true));
     this.themesOptions$.pipe(first(), takeUntilDestroyed(this.destroyRef)).subscribe(res => {
       this._themesOptions = res;
     });
