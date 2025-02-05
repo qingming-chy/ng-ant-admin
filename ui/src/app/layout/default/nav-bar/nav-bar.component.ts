@@ -1,6 +1,6 @@
 import { NgTemplateOutlet, AsyncPipe } from '@angular/common';
 import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject, DestroyRef, booleanAttribute, input, computed } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { takeUntilDestroyed, toObservable } from '@angular/core/rxjs-interop';
 import { ActivatedRoute, NavigationEnd, Router, RouterLink } from '@angular/router';
 import { Observable } from 'rxjs';
 import { filter, map, mergeMap, switchMap, tap } from 'rxjs/operators';
@@ -46,11 +46,12 @@ export class NavBarComponent implements OnInit {
     return this.userInfoService.$userInfo().authCode;
   });
 
-  themesOptions$ = this.themesService.getThemesMode();
   $isNightTheme = computed(() => this.themesService.$isNightTheme());
-  isCollapsed$ = this.themesService.getIsCollapsed();
-  isOverMode$ = this.themesService.getIsOverMode();
-  leftMenuArray$ = this.splitNavStoreService.getSplitLeftNavArrayStore();
+  // todo signal最后要修正
+  themesOptions$ = toObservable(this.themesService.$themesOptions);
+  isCollapsed$ = toObservable(this.themesService.$isCollapsed);
+  isOverMode$ = toObservable(this.themesService.$isOverModeTheme);
+  leftMenuArray$ = toObservable(this.splitNavStoreService.$splitLeftNavArray);
   subTheme$: Observable<NzSafeAny>;
 
   themesMode: ThemeMode['key'] = 'side';
@@ -149,7 +150,7 @@ export class NavBarComponent implements OnInit {
   setMixModeLeftMenu(): void {
     this.menus.forEach(item => {
       if (item.selected) {
-        this.splitNavStoreService.setSplitLeftNavArrayStore(item.children || []);
+        this.splitNavStoreService.$splitLeftNavArray.set(item.children || []);
       }
     });
   }
@@ -206,7 +207,7 @@ export class NavBarComponent implements OnInit {
       //   this.splitNavStoreService.setSplitLeftNavArrayStore(currentLeftNavArray);
       // }
     }
-    this.splitNavStoreService.setSplitLeftNavArrayStore(currentLeftNavArray);
+    this.splitNavStoreService.$splitLeftNavArray.set(currentLeftNavArray);
   }
 
   flatMenu(menus: Menu[], routePath: string): void {

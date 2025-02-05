@@ -1,5 +1,5 @@
 import { NgClass, NgStyle, AsyncPipe } from '@angular/common';
-import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject, DestroyRef } from '@angular/core';
+import { Component, OnInit, ChangeDetectionStrategy, ChangeDetectorRef, inject, DestroyRef, computed } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { NavigationEnd, Router } from '@angular/router';
 import { Observable } from 'rxjs';
@@ -36,10 +36,10 @@ export class TabComponent implements OnInit {
 
   tabsSourceData: TabModel[] = [];
   tabsSourceData$ = this.tabService.getTabArray$();
-  themesOptions$ = this.themesService.getThemesMode();
-  leftMenuArray$: Observable<Menu[]> = this.splitNavStoreService.getSplitLeftNavArrayStore();
-  isOverMode$ = this.themesService.getIsOverMode();
-  isCollapsed$ = this.themesService.getIsCollapsed();
+  $themesOptions = computed(() => this.themesService.$themesOptions());
+  $leftMenuArray = computed(() => this.splitNavStoreService.$splitLeftNavArray());
+  $isOverMode = computed(() => this.themesService.$isOverModeTheme());
+  $isCollapsed = computed(() => this.themesService.$isCollapsed());
   destroyRef = inject(DestroyRef);
 
   constructor() {
